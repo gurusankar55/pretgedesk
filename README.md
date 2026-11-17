@@ -141,3 +141,25 @@ docs/tge-*.html                 evidence pages for the Studio test
 ```
 
 License: MIT
+
+## Deployed and tested (GenLayer Studio, 17 Nov 2026)
+
+| contract | address |
+|---|---|
+| production (`contracts/pretge_desk.py`) | `0xcb935C6B5e9C09C5447A1284C88106F9a7D9A674` |
+| demo (`contracts/pretge_desk_demo.py`) | `0xa33E9e5a542110c20DeE3377C4Caa99a1fE304eF` |
+
+Demo contract, Studio accounts (account 1 = seller, account 2 = buyer):
+
+| scenario | calls | result |
+|---|---|---|
+| A. delivered | create_market → create_offer (+1 GEN) → seller `fill_offer` → buyer `fill_offer` (+1 GEN) → `propose_tge` → `submit_delivery` during the challenge window → `submit_delivery` after it | `"0"`, `"0"`, error *seller cannot fill own offer*, `"FILLED"`, `VERIFIED:6` (all validators agreed), error *TGE not final (PENDING_LIVE)*, `DELIVERED`: seller paid 2 GEN |
+| B. not delivered | new market → offer → fill → `propose_tge` → `submit_delivery` with the tx already used in A → `settle` after the delivery window | `VERIFIED:6`, error *transaction already used for offer 0*, `DEFAULTED`: buyer paid 2 GEN |
+| C. disputed TGE | offer → fill → `propose_tge` with address A from `tge-two.html` → `challenge_tge` with address B → `settle` | `VERIFIED:6`, `AMBIGUOUS` (validators verified B as `VERIFIED:18`), `REFUNDED`: 1 GEN back to each side |
+| D. no TGE | market with a 2-minute TGE window → offer → fill → `settle` after the deadline | `REFUNDED` |
+| extra | `create_offer` on a market that is already LIVE | error *new offers only before the TGE (LIVE)* |
+
+Web app (MetaMask on GenLayer Studio):
+
+- **Demo:** create a market, post an offer with a 0.01 GEN bond, then cancel it. The bond comes back (`0.01 GEN → seller, cancelled by seller`).
+- **Production:** create a market, then `propose_tge` with Base mainnet USDC (`0x833589fC…2913`) and `docs/tge-base.html`. Result: `VERIFIED:6` from the Base mainnet explorer, and the 1-hour challenge window starts.
